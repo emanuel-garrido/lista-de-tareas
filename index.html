@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Pendientes</title>
+    <!-- Incluimos Tailwind CSS para un diseño moderno y rápido -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Usamos la fuente Inter para un look más limpio */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Transiciones suaves para el modal */
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <!-- Contenedor principal de la lista de tareas -->
+    <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6">
+        <!-- Cabecera -->
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold text-gray-700">PENDIENTES</h1>
+            <button id="openModalBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center text-2xl transition-transform duration-200 transform hover:scale-110">
+                +
+            </button>
+        </div>
+
+        <!-- Lista donde se mostrarán las tareas -->
+        <div id="taskList" class="space-y-3">
+            <!-- Las tareas creadas se insertarán aquí con JavaScript -->
+        </div>
+    </div>
+
+    <!-- Modal para añadir nueva tarea (oculto por defecto) -->
+    <div id="taskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 opacity-0 invisible">
+        <div id="modalContent" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform scale-95">
+            <h2 class="text-xl font-semibold mb-4">Nueva Tarea</h2>
+            
+            <!-- Campo de texto para la descripción -->
+            <div>
+                <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <input type="text" id="taskDescription" placeholder="Ej: Comprar leche" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <!-- Botón para crear la tarea -->
+            <div class="mt-6 flex justify-end">
+                <button id="closeModalBtn" type="button" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">Cancelar</button>
+                <button id="createTaskBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">
+                    Crear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- SELECCIÓN DE ELEMENTOS DEL DOM ---
+            const openModalBtn = document.getElementById('openModalBtn');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const taskModal = document.getElementById('taskModal');
+            const modalContent = document.getElementById('modalContent');
+            const createTaskBtn = document.getElementById('createTaskBtn');
+            const taskInput = document.getElementById('taskDescription');
+            const taskList = document.getElementById('taskList');
+
+            // --- FUNCIONES DEL MODAL ---
+
+            // Función para abrir el modal con una animación suave
+            const openModal = () => {
+                taskModal.classList.remove('invisible');
+                taskModal.classList.add('opacity-100');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+                taskInput.focus(); // Coloca el cursor en el input
+            };
+
+            // Función para cerrar el modal con animación
+            const closeModal = () => {
+                modalContent.classList.add('scale-95');
+                taskModal.classList.remove('opacity-100');
+                taskModal.classList.add('invisible');
+                taskInput.value = ''; // Limpia el input al cerrar
+            };
+            
+            // --- LÓGICA DE TAREAS Y LOCAL STORAGE ---
+
+            /**
+             * Carga las tareas desde localStorage y las muestra en la pantalla.
+             */
+            const renderTasks = () => {
+                // Obtenemos las tareas. Si no hay, usamos un array vacío.
+                const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                
+                // Limpiamos la lista actual para no duplicar tareas
+                taskList.innerHTML = '';
+
+                if (tasks.length === 0) {
+                    taskList.innerHTML = `<p class="text-gray-500 text-center py-4">No tienes tareas pendientes. ¡Añade una!</p>`;
+                    return;
+                }
+
+                // Creamos y añadimos un elemento HTML por cada tarea
+                tasks.forEach((taskText, index) => {
+                    const taskItem = document.createElement('div');
+                    taskItem.className = 'bg-gray-50 p-4 rounded-lg shadow-sm flex justify-between items-center';
+                    
+                    const taskTextElement = document.createElement('p');
+                    taskTextElement.textContent = taskText;
+                    taskTextElement.className = 'text-gray-800';
+                    
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Eliminar';
+                    deleteButton.className = 'text-red-500 hover:text-red-700 text-sm font-semibold';
+                    deleteButton.onclick = () => deleteTask(index);
+
+                    taskItem.appendChild(taskTextElement);
+                    taskItem.appendChild(deleteButton);
+                    taskList.appendChild(taskItem);
+                });
+            };
+
+            /**
+             * Guarda una nueva tarea en localStorage.
+             */
+            const addTask = () => {
+                const taskText = taskInput.value.trim(); // Obtiene el texto y quita espacios
+
+                if (taskText) { // Si el texto no está vacío
+                    const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                    tasks.push(taskText);
+                    localStorage.setItem('tasks', JSON.stringify(tasks));
+                    renderTasks(); // Actualizamos la vista
+                    closeModal(); // Cerramos el modal
+                } else {
+                    // Si el usuario no escribe nada, podemos mostrar una alerta o simplemente no hacer nada.
+                    alert('Por favor, escribe una descripción para la tarea.');
+                }
+            };
+
+            /**
+             * Elimina una tarea de localStorage por su índice.
+             * @param {number} index - El índice de la tarea a eliminar.
+             */
+            const deleteTask = (index) => {
+                const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                tasks.splice(index, 1); // Elimina la tarea del array
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                renderTasks(); // Vuelve a renderizar la lista actualizada
+            };
+
+
+            // --- ASIGNACIÓN DE EVENTOS ---
+            openModalBtn.addEventListener('click', openModal);
+            closeModalBtn.addEventListener('click', closeModal);
+            createTaskBtn.addEventListener('click', addTask);
+            
+            // Permite crear la tarea presionando "Enter" en el input
+            taskInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            });
+
+            // Cierra el modal si se hace clic en el fondo oscuro
+            taskModal.addEventListener('click', (e) => {
+                if (e.target === taskModal) {
+                    closeModal();
+                }
+            });
+
+            // --- INICIALIZACIÓN ---
+            // Carga las tareas guardadas en cuanto la página está lista.
+            renderTasks();
+        });
+    </script>
+</body>
+</html>
