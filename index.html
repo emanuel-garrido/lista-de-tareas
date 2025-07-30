@@ -3,249 +3,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tablero de Tareas</title>
-    <!-- Incluimos Tailwind CSS para un diseño moderno y rápido -->
+    <title>Tablero de Tareas Avanzado</title>
+    <!-- Tailwind CSS para el diseño -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SortableJS para Drag and Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Usamos la fuente Inter para un look más limpio */
-        body {
-            font-family: 'Inter', sans-serif;
+        body { font-family: 'Inter', sans-serif; }
+        /* Estilo para el elemento fantasma mientras se arrastra */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #c8ebfb;
         }
-        /* Transiciones suaves para el modal y las tareas */
-        .modal {
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        .modal-content {
-            transition: transform 0.3s ease;
+        /* Animación suave al soltar */
+        .sortable-chosen {
+            cursor: grabbing;
         }
         .task-item {
-            transition: background-color 0.2s ease-in-out;
+             cursor: grab;
+        }
+        /* Transiciones para el cambio de vista */
+        .view {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4">
 
-    <h1 class="text-3xl font-bold text-gray-800 mb-8">Mi Tablero de Tareas</h1>
+    <header class="w-full max-w-5xl mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 text-center">Mi Tablero de Tareas</h1>
+        <!-- Navegación para cambiar de vista -->
+        <nav class="mt-4 flex justify-center bg-white p-2 rounded-lg shadow-sm">
+            <button id="showKanbanBtn" class="px-4 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md shadow-sm">Tablero Kanban</button>
+            <button id="showPaginatedBtn" class="px-4 py-2 text-sm font-semibold text-gray-600 ml-2">Vista Paginada</button>
+        </nav>
+    </header>
 
-    <!-- Contenedor principal del tablero con dos columnas -->
-    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <!-- Columna de PENDIENTES -->
-        <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col">
-            <!-- Cabecera de la columna -->
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-700">PENDIENTES</h2>
-                <button id="openModalBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center text-2xl transition-transform duration-200 transform hover:scale-110">
-                    +
-                </button>
-            </div>
-            <!-- Lista donde se mostrarán las tareas pendientes -->
-            <div id="pending-list" class="space-y-3 flex-grow">
-                <!-- Las tareas pendientes se insertarán aquí -->
-            </div>
-        </div>
-
-        <!-- Columna de EN PROCESO -->
-        <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col">
-            <!-- Cabecera de la columna -->
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-700">EN PROCESO</h2>
-            </div>
-            <!-- Lista donde se mostrarán las tareas en proceso -->
-            <div id="inprogress-list" class="space-y-3 flex-grow">
-                <!-- Las tareas en proceso se insertarán aquí -->
+    <main class="w-full max-w-5xl">
+        <!-- VISTA 1: TABLERO KANBAN -->
+        <div id="kanban-view" class="view">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Columna de PENDIENTES -->
+                <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold text-gray-700">PENDIENTES</h2>
+                        <button id="openModalBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center text-2xl transform hover:scale-110">+</button>
+                    </div>
+                    <div id="pending-list" class="space-y-3 flex-grow min-h-[200px] bg-gray-50 p-2 rounded-lg"></div>
+                </div>
+                <!-- Columna de EN PROCESO -->
+                <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">EN PROCESO</h2>
+                    <div id="inprogress-list" class="space-y-3 flex-grow min-h-[200px] bg-gray-50 p-2 rounded-lg"></div>
+                </div>
             </div>
         </div>
 
-    </div>
+        <!-- VISTA 2: LISTA PAGINADA -->
+        <div id="paginated-view" class="view hidden">
+             <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">Todas las Tareas</h2>
+                    <!-- Controles de Layout -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-medium">Ver como:</span>
+                        <button id="layout-list-btn" class="p-2 rounded-md bg-blue-500 text-white">Lista</button>
+                        <button id="layout-grid-btn" class="p-2 rounded-md bg-gray-200 text-gray-700">Cuadrícula</button>
+                    </div>
+                </div>
+                <!-- Contenedor para las tareas paginadas -->
+                <div id="paginated-task-list" class="mb-4"></div>
+                <!-- Controles de paginación -->
+                <div id="pagination-controls" class="flex justify-center items-center space-x-2"></div>
+             </div>
+        </div>
+    </main>
 
-    <!-- Modal para añadir nueva tarea (oculto por defecto) -->
-    <div id="taskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 opacity-0 invisible">
-        <div id="modalContent" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform scale-95">
+    <!-- Modal para añadir nueva tarea (sin cambios) -->
+    <div id="taskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 opacity-0 invisible transition-opacity duration-300">
+        <div id="modalContent" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-300">
             <h2 class="text-xl font-semibold mb-4">Nueva Tarea</h2>
-            <div>
-                <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                <input type="text" id="taskDescription" placeholder="Ej: Diseñar el prototipo" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-            </div>
+            <input type="text" id="taskDescription" placeholder="Ej: Implementar Drag and Drop" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
             <div class="mt-6 flex justify-end">
-                <button id="closeModalBtn" type="button" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">Cancelar</button>
-                <button id="createTaskBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">
-                    Crear
-                </button>
+                <button id="closeModalBtn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">Cancelar</button>
+                <button id="createTaskBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Crear</button>
             </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- SELECCIÓN DE ELEMENTOS DEL DOM ---
+            // --- STATE MANAGEMENT ---
+            let currentPage = 1;
+            let itemsPerPage = 6;
+            let currentLayout = 'list'; // 'list' or 'grid'
+
+            // --- DOM ELEMENT SELECTION ---
+            const kanbanView = document.getElementById('kanban-view');
+            const paginatedView = document.getElementById('paginated-view');
+            const showKanbanBtn = document.getElementById('showKanbanBtn');
+            const showPaginatedBtn = document.getElementById('showPaginatedBtn');
+            const pendingList = document.getElementById('pending-list');
+            const inProgressList = document.getElementById('inprogress-list');
+            const paginatedTaskList = document.getElementById('paginated-task-list');
+            const paginationControls = document.getElementById('pagination-controls');
+            const layoutListBtn = document.getElementById('layout-list-btn');
+            const layoutGridBtn = document.getElementById('layout-grid-btn');
+            
+            // Modal elements
             const openModalBtn = document.getElementById('openModalBtn');
             const closeModalBtn = document.getElementById('closeModalBtn');
             const taskModal = document.getElementById('taskModal');
             const modalContent = document.getElementById('modalContent');
             const createTaskBtn = document.getElementById('createTaskBtn');
             const taskInput = document.getElementById('taskDescription');
-            const pendingList = document.getElementById('pending-list');
-            const inProgressList = document.getElementById('inprogress-list');
 
-            // --- FUNCIONES DEL MODAL ---
-            const openModal = () => {
-                taskModal.classList.remove('invisible');
-                taskModal.classList.add('opacity-100');
-                modalContent.classList.remove('scale-95');
-                modalContent.classList.add('scale-100');
-                taskInput.focus();
+            // --- DATA HANDLING (localStorage) ---
+            const getBoardData = () => JSON.parse(localStorage.getItem('kanbanBoard')) || { pending: [], inProgress: [] };
+            const saveBoardData = (data) => localStorage.setItem('kanbanBoard', JSON.stringify(data));
+
+            // --- VIEW SWITCHING LOGIC ---
+            const switchView = (viewToShow) => {
+                const isKanban = viewToShow === 'kanban';
+                kanbanView.classList.toggle('hidden', !isKanban);
+                paginatedView.classList.toggle('hidden', isKanban);
+                
+                showKanbanBtn.classList.toggle('bg-blue-500', isKanban);
+                showKanbanBtn.classList.toggle('text-white', isKanban);
+                showPaginatedBtn.classList.toggle('bg-blue-500', !isKanban);
+                showPaginatedBtn.classList.toggle('text-white', !isKanban);
+
+                if (!isKanban) renderPaginatedView();
             };
 
-            const closeModal = () => {
-                modalContent.classList.add('scale-95');
-                taskModal.classList.remove('opacity-100');
-                taskModal.classList.add('invisible');
-                taskInput.value = '';
-            };
-            
-            // --- LÓGICA DE TAREAS Y LOCAL STORAGE ---
-
-            /**
-             * Obtiene los datos del tablero desde localStorage.
-             * Ahora los datos son un objeto con dos arrays: { pending: [], inProgress: [] }
-             * @returns {{pending: string[], inProgress: string[]}}
-             */
-            const getBoardData = () => {
-                const data = JSON.parse(localStorage.getItem('kanbanBoard')) || { pending: [], inProgress: [] };
-                return data;
-            };
-
-            /**
-             * Guarda los datos del tablero en localStorage.
-             * @param {{pending: string[], inProgress: string[]}} data 
-             */
-            const saveBoardData = (data) => {
-                localStorage.setItem('kanbanBoard', JSON.stringify(data));
-            };
-
-            /**
-             * Renderiza ambas columnas del tablero a partir de los datos guardados.
-             */
-            const renderBoard = () => {
+            // --- KANBAN VIEW LOGIC ---
+            const renderKanbanBoard = () => {
                 const data = getBoardData();
-
-                // Limpiar ambas listas
                 pendingList.innerHTML = '';
                 inProgressList.innerHTML = '';
-
-                // Renderizar tareas PENDIENTES
-                if (data.pending.length === 0) {
-                    pendingList.innerHTML = `<p class="text-gray-500 text-center py-4">No tienes tareas pendientes.</p>`;
-                } else {
-                    data.pending.forEach((taskText, index) => {
-                        const taskItem = createTaskElement(taskText, 'pending', index);
-                        pendingList.appendChild(taskItem);
-                    });
-                }
-
-                // Renderizar tareas EN PROCESO
-                if (data.inProgress.length === 0) {
-                    inProgressList.innerHTML = `<p class="text-gray-500 text-center py-4">Ninguna tarea en proceso.</p>`;
-                } else {
-                    data.inProgress.forEach((taskText, index) => {
-                        const taskItem = createTaskElement(taskText, 'inProgress', index);
-                        inProgressList.appendChild(taskItem);
-                    });
-                }
+                data.pending.forEach(text => pendingList.appendChild(createTaskElement(text)));
+                data.inProgress.forEach(text => inProgressList.appendChild(createTaskElement(text)));
             };
 
-            /**
-             * Crea el elemento HTML para una tarea.
-             * @param {string} text - El texto de la tarea.
-             * @param {'pending' | 'inProgress'} column - La columna a la que pertenece.
-             * @param {number} index - El índice de la tarea en su array.
-             * @returns {HTMLElement}
-             */
-            const createTaskElement = (text, column, index) => {
+            const createTaskElement = (text) => {
                 const item = document.createElement('div');
-                item.className = 'task-item bg-gray-50 p-4 rounded-lg shadow-sm flex justify-between items-center';
-                
-                const textElement = document.createElement('p');
-                textElement.textContent = text;
-                textElement.className = 'text-gray-800';
-                item.appendChild(textElement);
-
-                const buttonsContainer = document.createElement('div');
-                
-                // Si la tarea está en 'pending', añadimos el botón para moverla
-                if (column === 'pending') {
-                    const moveButton = document.createElement('button');
-                    moveButton.innerHTML = `&rarr;`; // Flecha a la derecha
-                    moveButton.className = 'text-green-500 hover:text-green-700 font-bold text-xl mr-3';
-                    moveButton.title = 'Mover a En Proceso';
-                    moveButton.onclick = () => moveTask(index);
-                    buttonsContainer.appendChild(moveButton);
-                }
-
-                const deleteButton = document.createElement('button');
-                deleteButton.innerHTML = `&times;`; // Símbolo de 'X'
-                deleteButton.className = 'text-red-500 hover:text-red-700 font-bold text-xl';
-                deleteButton.title = 'Eliminar Tarea';
-                deleteButton.onclick = () => deleteTask(column, index);
-                buttonsContainer.appendChild(deleteButton);
-                
-                item.appendChild(buttonsContainer);
+                item.className = 'task-item bg-white p-3 rounded-md shadow-sm border border-gray-200';
+                item.textContent = text;
                 return item;
             };
 
-            /**
-             * Añade una nueva tarea a la columna de 'pendientes'.
-             */
+            // --- DRAG AND DROP LOGIC (SortableJS) ---
+            const initDragAndDrop = () => {
+                const options = {
+                    group: 'tasks', // The magic option to allow moving between lists
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: () => { // This function is called when a drag operation ends
+                        updateDataFromDOM();
+                    }
+                };
+                Sortable.create(pendingList, options);
+                Sortable.create(inProgressList, options);
+            };
+
+            const updateDataFromDOM = () => {
+                const pendingTasks = Array.from(pendingList.children).map(item => item.textContent);
+                const inProgressTasks = Array.from(inProgressList.children).map(item => item.textContent);
+                saveBoardData({ pending: pendingTasks, inProgress: inProgressTasks });
+                // If paginated view is active, refresh it
+                if (!paginatedView.classList.contains('hidden')) {
+                    renderPaginatedView();
+                }
+            };
+
+            // --- PAGINATED VIEW LOGIC ---
+            const renderPaginatedView = () => {
+                const data = getBoardData();
+                const allTasks = [...data.pending, ...data.inProgress];
+                paginatedTaskList.innerHTML = '';
+
+                // Apply layout classes
+                paginatedTaskList.className = currentLayout === 'grid' 
+                    ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4' 
+                    : 'space-y-3';
+                
+                // Pagination calculation
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const paginatedTasks = allTasks.slice(startIndex, endIndex);
+
+                if (paginatedTasks.length === 0 && currentPage > 1) {
+                    currentPage--;
+                    renderPaginatedView();
+                    return;
+                }
+
+                paginatedTasks.forEach(text => {
+                    const item = document.createElement('div');
+                    item.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border';
+                    item.textContent = text;
+                    paginatedTaskList.appendChild(item);
+                });
+                
+                renderPaginationControls(allTasks.length);
+            };
+
+            const renderPaginationControls = (totalItems) => {
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                paginationControls.innerHTML = '';
+
+                if (totalPages <= 1) return;
+
+                // Prev Button
+                const prevBtn = document.createElement('button');
+                prevBtn.textContent = 'Anterior';
+                prevBtn.className = 'px-4 py-2 bg-gray-200 rounded-md disabled:opacity-50';
+                prevBtn.disabled = currentPage === 1;
+                prevBtn.onclick = () => {
+                    currentPage--;
+                    renderPaginatedView();
+                };
+                paginationControls.appendChild(prevBtn);
+
+                // Page Info
+                const pageInfo = document.createElement('span');
+                pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+                pageInfo.className = 'text-sm text-gray-700';
+                paginationControls.appendChild(pageInfo);
+
+                // Next Button
+                const nextBtn = document.createElement('button');
+                nextBtn.textContent = 'Siguiente';
+                nextBtn.className = 'px-4 py-2 bg-gray-200 rounded-md disabled:opacity-50';
+                nextBtn.disabled = currentPage === totalPages;
+                nextBtn.onclick = () => {
+                    currentPage++;
+                    renderPaginatedView();
+                };
+                paginationControls.appendChild(nextBtn);
+            };
+            
+            const changeLayout = (layout) => {
+                currentLayout = layout;
+                layoutListBtn.classList.toggle('bg-blue-500', layout === 'list');
+                layoutListBtn.classList.toggle('text-white', layout === 'list');
+                layoutGridBtn.classList.toggle('bg-blue-500', layout === 'grid');
+                layoutGridBtn.classList.toggle('text-white', layout === 'grid');
+                renderPaginatedView();
+            };
+
+            // --- MODAL AND TASK CREATION LOGIC ---
+            const openModal = () => {
+                taskModal.classList.remove('invisible');
+                modalContent.classList.remove('scale-95');
+            };
+            const closeModal = () => {
+                taskModal.classList.add('invisible');
+                modalContent.classList.add('scale-95');
+                taskInput.value = '';
+            };
             const addTask = () => {
                 const taskText = taskInput.value.trim();
                 if (taskText) {
                     const data = getBoardData();
                     data.pending.push(taskText);
                     saveBoardData(data);
-                    renderBoard();
+                    renderKanbanBoard();
                     closeModal();
-                } else {
-                    alert('Por favor, escribe una descripción para la tarea.');
                 }
             };
-
-            /**
-             * Mueve una tarea de 'pendientes' a 'en proceso'.
-             * @param {number} index - El índice de la tarea a mover.
-             */
-            const moveTask = (index) => {
-                const data = getBoardData();
-                const taskToMove = data.pending.splice(index, 1)[0]; // Saca la tarea del array 'pending'
-                data.inProgress.push(taskToMove); // Y la añade a 'inProgress'
-                saveBoardData(data);
-                renderBoard();
-            };
-
-            /**
-             * Elimina una tarea de cualquier columna.
-             * @param {'pending' | 'inProgress'} column - La columna de la tarea.
-             * @param {number} index - El índice de la tarea a eliminar.
-             */
-            const deleteTask = (column, index) => {
-                const data = getBoardData();
-                data[column].splice(index, 1); // Elimina la tarea del array correspondiente
-                saveBoardData(data);
-                renderBoard();
-            };
-
-            // --- ASIGNACIÓN DE EVENTOS ---
+            
+            // --- EVENT LISTENERS ---
+            showKanbanBtn.addEventListener('click', () => switchView('kanban'));
+            showPaginatedBtn.addEventListener('click', () => switchView('paginated'));
+            layoutListBtn.addEventListener('click', () => changeLayout('list'));
+            layoutGridBtn.addEventListener('click', () => changeLayout('grid'));
             openModalBtn.addEventListener('click', openModal);
             closeModalBtn.addEventListener('click', closeModal);
             createTaskBtn.addEventListener('click', addTask);
-            taskInput.addEventListener('keypress', (e) => e.key === 'Enter' && addTask());
             taskModal.addEventListener('click', (e) => e.target === taskModal && closeModal());
 
-            // --- INICIALIZACIÓN ---
-            renderBoard();
+            // --- INITIALIZATION ---
+            renderKanbanBoard();
+            initDragAndDrop();
         });
     </script>
 </body>
